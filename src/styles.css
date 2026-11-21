@@ -122,6 +122,15 @@
   }
 }
 
+/* Scanning bar for loading states (transform only, 60fps). */
+@keyframes scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@utility scan-bar {
+  animation: scan 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
 /* Amber hover/active glow for console panels (token-driven, no literals in JSX) */
 @utility glow-primary {
   box-shadow: var(--shadow-card-hover);
