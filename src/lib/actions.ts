@@ -32,4 +32,5 @@ export const actions = {
   generateScenario: (track: string) => callAction<GenerateScenarioResult>('generateScenario', { track }),
   submitAnswer: (scenarioId: string, text: string) => callAction<Debrief>('submitAnswer', { scenarioId, text }),
   getDebrief: (scenarioId: string) => callAction<Debrief>('getDebrief', { scenarioId }),
+  upvote: (answerId: string) => callAction<{ upvoteCount: number }>('upvote', { answerId }),
 }

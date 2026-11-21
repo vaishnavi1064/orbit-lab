@@ -10,6 +10,7 @@ import type { ActionResult } from 'deepspace/worker'
 import { MAX_ANSWER_CHARS, type AnswerData, type AnswerKeyData, type Debrief, type ScenarioData } from '../lib/types'
 import { gradeAnswer } from '../server/ai'
 import { aiContext, asArray, displayNameFor, fail, guarded, stringParam, type Ctx } from './shared'
+import { syncCrew } from './crew'
 
 export async function submitAnswer(ctx: Ctx): Promise<ActionResult<Debrief>> {
   return guarded<Debrief>('submitAnswer', async () => {
@@ -55,12 +56,23 @@ export async function submitAnswer(ctx: Ctx): Promise<ActionResult<Debrief>> {
       score: grade.score,
       gotRight: grade.gotRight,
       missed: grade.missed,
+      crew: [ctx.userId],
+      upvoteCount: 0,
     }
     const created = await ctx.tools.create('answers', answer)
     if (!created.success) {
       // A concurrent double-submit loses the race at the DO's uniqueOn check.
       if (/duplicate/i.test(created.error)) return fail('You already transmitted an answer for this mission.')
       return fail('Could not save your answer. Try again.')
+    }
+
+    // Open the Crew Log both ways: this user joins every answer's crew, and
+    // this answer's crew gets everyone who submitted before.
+    try {
+      await syncCrew(ctx, scenarioId)
+    } catch (err) {
+      // The answer is saved; the next submit on this scenario re-syncs.
+      console.error(`[submitAnswer] ${err instanceof Error ? err.message : String(err)}`)
     }
 
     return {

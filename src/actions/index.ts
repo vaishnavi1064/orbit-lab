@@ -8,9 +8,11 @@ import type { Env } from '../../worker'
 import { generateScenario } from './generate-scenario'
 import { getDebrief } from './get-debrief'
 import { submitAnswer } from './submit-answer'
+import { upvote } from './upvote'
 
 export const actions: Record<string, ActionHandler<Env>> = {
   generateScenario,
   submitAnswer,
   getDebrief,
+  upvote,
 }
