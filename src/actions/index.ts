@@ -9,10 +9,13 @@ import { generateScenario } from './generate-scenario'
 import { getDebrief } from './get-debrief'
 import { submitAnswer } from './submit-answer'
 import { upvote } from './upvote'
+import { cleanupTestData } from './cleanup-test-data'
 
 export const actions: Record<string, ActionHandler<Env>> = {
   generateScenario,
   submitAnswer,
   getDebrief,
   upvote,
+  // TEMPORARY: removed right after the one-off production cleanup.
+  cleanupTestData,
 }
