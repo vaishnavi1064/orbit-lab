@@ -30,21 +30,27 @@ function SignedOutPanel() {
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-6 py-20">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Sign in to continue</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This page is only available to signed-in users.
-        </p>
-        <Button className="mt-6 w-full" onClick={() => setShowAuthModal(true)}>
-          Sign in
-        </Button>
-        <Link
-          to="/"
-          className="mt-4 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Back to home
-        </Link>
+    <div className="mx-auto flex min-h-[60vh] max-w-6xl items-center px-4 py-16 sm:px-8">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="label-mono text-muted-foreground">Channel locked</span>
+        </div>
+        <div className="p-6">
+          <h1 className="text-2xl font-semibold text-foreground">Sign in to open this channel.</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Briefings, answers, and the Crew Log are for signed-in crew only.
+          </p>
+          <Button className="mt-6 w-full" size="lg" onClick={() => setShowAuthModal(true)}>
+            Sign in
+          </Button>
+          <Link
+            to="/home"
+            className="label-mono mt-5 inline-block rounded-md text-muted-foreground hover:text-foreground"
+          >
+            Back to mission control
+          </Link>
+        </div>
       </div>
 
       {showAuthModal && <AuthOverlay onClose={() => setShowAuthModal(false)} />}

@@ -1,28 +1,48 @@
-/**
- * Placeholder home page — replace this with the app's real home.
- *
- * This is intentionally unstyled scaffolding, not a design to build on.
- * Design the app's own look (layout, theme tokens, typography) from your
- * product's point of view instead of extending this page.
- */
+/* home pattern: data-forward — five track consoles with your missions flown and average score above the fold */
 
-import { useAuthProfileReady } from 'deepspace'
-import { APP_NAME } from '../../constants'
+import { useState } from 'react'
+import { AuthOverlay, useAuth } from 'deepspace'
+import { Radio } from 'lucide-react'
+import { PageHeader } from '../../components/space/PageHeader'
+import { TrackGrid } from '../../components/space/TrackGrid'
 
 export default function HomePage() {
-  const { isSignedIn, user } = useAuthProfileReady({ requireUser: true })
+  const { isSignedIn } = useAuth()
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-3 bg-background px-6 text-center text-foreground">
-      <h1 className="text-2xl font-semibold">{APP_NAME}</h1>
-      <p className="max-w-md text-sm text-muted-foreground">
-        This is a placeholder page. Replace <code>src/pages/(app)/home.tsx</code>{' '}
-        with the app&apos;s real home, and give the app its own theme in{' '}
-        <code>src/themes.css</code>.
-      </p>
-      {isSignedIn && user && (
-        <p className="text-sm text-muted-foreground">Signed in as {user.name ?? user.email}</p>
-      )}
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
+      <PageHeader label="Mission control" title="Choose your station.">
+        Each track hands you real scenarios. Finish them all and a new one is generated for you.
+      </PageHeader>
+
+      {!isSignedIn && <SignInStrip />}
+
+      <div className="mt-10">
+        <TrackGrid />
+      </div>
+    </div>
+  )
+}
+
+/** Signed-out: the same surface in preview, with an inline sign-in. */
+function SignInStrip() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-8 flex flex-col gap-4 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <Radio className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+        <div>
+          <p className="font-medium text-foreground">You are listening in, not on the channel.</p>
+          <p className="text-sm text-muted-foreground">Sign in to receive briefings, transmit answers, and read the Crew Log.</p>
+        </div>
+      </div>
+      <button
+        onClick={() => setOpen(true)}
+        className="h-11 shrink-0 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-[filter] hover:brightness-110"
+      >
+        Sign in to join
+      </button>
+      {open && <AuthOverlay onClose={() => setOpen(false)} />}
     </div>
   )
 }
