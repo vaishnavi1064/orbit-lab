@@ -287,6 +287,7 @@ Unsure / notes
   to clients. No values are. I consider this acceptable; flagging it for the
   security write-up.
 - `displayName` comes from the caller's `users` row (fallback "Crew member").
+  (Superseded: removed for the anonymous Crew Log, see the last section.)
 - Everything is still mock data. Live AI is switched on after all phases,
   per the plan.
 
@@ -645,3 +646,53 @@ During Cabin Repair" iss-ops #1), their 2 answer keys, 0 answers, 0 upvotes.
 Rule from the owner from here on: do not run any script that writes to
 production (prod-smoke, prod-live, prod-crew, prod-security) unless asked.
 The owner does the remaining production checks by hand.
+
+## Anonymous Crew Log (built and tested locally; NOT deployed yet)
+
+Owner request: show "Crew member N" (N = order of submission for that
+scenario, from 1) instead of real names, "You" for your own entry, and stop
+storing or sending names on answers so they never reach other users'
+browsers. Progress page unchanged. Deviation from SPEC.md, on the owner's
+explicit instruction: the spec lists `displayName` on answers; it is gone.
+
+What changed
+- `src/lib/crew.ts` (41bca5c): `crewNumbers` sorts a scenario's answers by
+  `createdAt` (ties by `recordId`) and numbers them from 1; `crewLabel` gives
+  "You" or "Crew member N". Computed in the browser: every crew member reads
+  all of a scenario's answers (DO-enforced), so every viewer gets the same
+  numbers, and no new column is needed. `CrewEntry` shows the number in the
+  avatar and "You" in amber for your own entry (replaces the old "You" badge,
+  so it is not shown twice). 4 new unit tests.
+- No names on answers (9509c20): `displayName` removed from the `answers`
+  schema, `AnswerData`, and `submitAnswer`; the unused `displayNameFor`
+  helper is deleted. Answers keep `userId` (needed for `ownerField`, `crew`
+  RBAC and "is this mine"), which is an opaque id, not a name.
+- Found by the new wire test, not by reading code (b86a35b): the SDK's
+  `user.list` roster frame is pushed to every signed-in socket and, by
+  default, contains every user's `{ id, name, role, lastSeenAt }` (the docs'
+  "public-identity projection"; no emails). With `userId` on each answer,
+  that would have let anyone map "Crew member 2" back to a real name. This
+  was already true in production before this change. Fix, per the docs'
+  users-directory privacy contract: `roster: 'read-policy'` on the users
+  schema, so a member's roster holds only the rows `read: 'own'` grants,
+  i.e. themselves. Nothing in the app uses `useUsers`, `useUserLookup` or
+  `usePresence` for peers; the nav still shows your own name (scaffold collab
+  test passes).
+- Schema note: the docs say removing a column is not migrated (the SQLite
+  column stays). Production has 0 answers, so there are no stored names to
+  clean up; new answers never write it.
+
+Tests (c3244d3), local only, AI_MODE switched to mock for the run and
+restored to live before committing
+- `tests/crew-log.spec.ts` (3 real users) now also asserts: own entry label
+  "You" for A and B; A sees B as "Crew member 2", B sees A as "Crew member
+  1"; the Crew Log never renders the other user's name; and across every
+  WebSocket frame and /api body each browser received, there is no
+  `"displayName"` and no other user's name or email.
+- First run failed exactly on that last check ("Crew A's browser received
+  Crew B's name", in the `user.list` frame), which is how the roster leak
+  was found. After the roster fix: e2e 16 passed, 1 skipped (opt-in
+  bad-JSON); vitest 21 passed; tsc clean. Screenshots at 1440 and 390 show
+  "1 You / Crew member 2" for A and "2 You / Crew member 1" for B.
+
+Deploy is waiting for the owner's "deploy".
