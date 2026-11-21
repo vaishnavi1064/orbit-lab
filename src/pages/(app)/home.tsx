@@ -5,9 +5,11 @@ import { AuthOverlay, useAuth } from 'deepspace'
 import { Radio } from 'lucide-react'
 import { PageHeader } from '../../components/space/PageHeader'
 import { TrackGrid } from '../../components/space/TrackGrid'
+import { useTrackStats } from '../../hooks/useMissionData'
 
 export default function HomePage() {
   const { isSignedIn } = useAuth()
+  const { stats, ready } = useTrackStats()
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
@@ -18,7 +20,7 @@ export default function HomePage() {
       {!isSignedIn && <SignInStrip />}
 
       <div className="mt-10">
-        <TrackGrid />
+        <TrackGrid stats={isSignedIn && ready ? stats : undefined} />
       </div>
     </div>
   )
