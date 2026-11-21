@@ -385,3 +385,44 @@ Unsure / notes
   so a provider change cannot slip a blog link into a scenario.
 - Live source quality per track is verified for one topic so far; the full
   live pass happens in step 4 (switch to live).
+
+## Phase 5: fal images with fallback (deployed)
+
+Live release `rel_01M7YPTQ2JW4RTN4J1FJ8XT8JN` (AI_MODE=mock, so the deployed
+app shows the gradient fallback; images appear after the live switch).
+
+Built
+- `generateImage` in src/server/ai.ts: `fal/run-model` with
+  `fal-ai/flux/schnell` (landscape_16_9, 4 steps, jpeg, safety checker on,
+  `maxCostUsd: 0.05`), then polls `fal/get-result` (1.5s x 30). Returns the
+  https image URL, or `null` for ANY problem (provider error, failed status,
+  timeout, exception). Prompt built from the title + a per-track scene and
+  always ends with "no text, no words, no letters, no writing, no logos"
+  (DeepSpace design rule 9).
+- Non-blocking by construction: `generateScenario` saves the scenario, then
+  `enqueueJob(... 'scenario-image' ...)` and returns immediately. The job
+  (src/jobs.ts, AppJobRoom) runs with an owner context (`buildCronContext`):
+  owner-billed integration calls and an RBAC-bypassing `records.update` that
+  writes `imageUrl`. The DO pushes the update, so open pages swap in the art
+  live. Docs say to use JobRoom instead of `waitUntil` (killed after 30s).
+- `ScenarioArt`: gradient "horizon" fallback (token colors + track glyph) is
+  always underneath; the `<img>` is lazy, async-decoded, fades in over 700ms
+  only after `onLoad`, and an `onError` keeps the gradient (covers expired or
+  blocked image URLs too). No fade under reduced motion.
+
+Verification
+- One real fal run via the CLI (~$0.002): `run-model` -> `{jobId, status:
+  IN_QUEUE}`; `get-result` -> `{status: COMPLETED, output.images[0]: {url,
+  width: 1024, height: 576}}`. Shapes match the code. The image (Titan lander,
+  navy shadows, amber horizon) had no text.
+- Unit tests (17 total): mock returns null; live run -> poll -> url; provider
+  failure, FAILED status, timeout, and thrown errors all return null; prompt
+  contains the no-text clause.
+- Production smoke after deploy: no regressions, no console errors.
+
+Unsure / notes
+- The job path (owner `integrations.call` inside AppJobRoom) only runs in live
+  mode, so it gets its end-to-end check during the live switch.
+- fal CDN URLs (`v3*.fal.media`) are not guaranteed permanent. The `onError`
+  fallback covers expiry; persisting images to R2 would remove the risk but
+  is out of scope for SPEC.
