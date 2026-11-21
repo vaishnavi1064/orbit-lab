@@ -289,3 +289,53 @@ Unsure / notes
 - `displayName` comes from the caller's `users` row (fallback "Crew member").
 - Everything is still mock data. Live AI is switched on after all phases,
   per the plan.
+
+## Phase 3: Crew Log, visibility rules, live updates, upvotes (deployed)
+
+Live release `rel_01M7YPC3N97TKS3PASAR7A5CKA` (still AI_MODE=mock).
+
+Built
+- `answers` now has `crew` (JSON userIds, the schema's `collaboratorsField`)
+  and `upvoteCount`; read rule changed from `'own'` to `'shared'`
+  (owner OR in crew; no visibilityField, so no public path).
+- `syncCrew` (src/actions/crew.ts), run by `submitAnswer` after the create:
+  re-query all answers for the scenario and set every row's `crew` to the full
+  submitter set. Only rows whose crew differs are updated.
+- `upvotes` collection (`uniqueOn: [answerId, userId]`, read `'own'`, no client
+  writes) and `upvote` action: answer must exist, no self-upvote, caller must
+  have submitted for that scenario, one vote per answer (checked + uniqueOn).
+  The count is recomputed from the upvotes table each time (no drift under
+  concurrent votes) and written to `answers.upvoteCount`, which the DO pushes
+  live to the crew.
+- UI: `CrewLog` (sorted by upvotes then time, framer `layout` reorders,
+  new arrivals slide in and flash amber once), `UpvoteButton` (spring on vote,
+  disabled for your own answer and after voting, aria-pressed), locked panel
+  before you submit that reveals nothing, not even a count.
+
+Tests
+- `tests/crew-log.spec.ts` with the docs' `users` fixture and THREE accounts
+  (A submits, B submits later, C never submits). Asserts on WebSocket frames
+  and /api bodies: B receives nothing of A's answer before submitting; the
+  server refuses B's getDebrief and upvote before B submits; after B submits
+  both see each other's answers live without reload; A's UI upvote reaches B
+  live; self-upvote (UI disabled + forged API call) and double upvote refused;
+  C never receives either answer. Full e2e suite: 14 passed.
+- `tests/tools/prod-crew.mjs` repeated the two-user flow on production: no
+  leak before submit, live answer and live upvote, no console errors.
+
+Bugs hit and fixes
+- Core-loop test flaked: when the mock grader gave a low score, the verdict
+  "Hold. Read the expert approach." also matched `getByText('Expert approach')`.
+  Fixed with `{ exact: true }`. Test bug, not app bug.
+- Mobile: the transmission count wrapped beside the heading, and the upvote
+  button stretched to the card height. Header stacks on mobile; button is
+  `self-start`.
+- Lint: reading a ref during render to flag "fresh" entries; switched to state.
+
+Unsure / notes
+- Crew access costs O(n) updates per submit (n answers on the scenario).
+  Fine at this scale; a per-scenario room would scale better but adds
+  complexity the spec does not need.
+- Answers saved in Phase 2 have `crew: []`. They stay visible to their owner,
+  and the next submit on that scenario syncs them into the crew.
+- Upvotes are one-way (no un-vote). SPEC only asks for upvote().
