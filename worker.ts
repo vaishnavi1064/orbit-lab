@@ -118,6 +118,10 @@ export interface Env extends DOBindings<typeof __DO_MANIFEST__> {
    * an authenticated app owner/admin. deepspace dev/test set it locally.
    */
   ALLOW_DEBUG_ROUTES?: string
+  /** Orbit Lab: "mock" (canned AI data) or "live" (DeepSpace integrations). */
+  AI_MODE?: string
+  /** Orbit Lab, mock only: "true" forces malformed model JSON to test errors. */
+  AI_MOCK_BAD_JSON?: string
 }
 
 export type AppContext = { Bindings: Env }
