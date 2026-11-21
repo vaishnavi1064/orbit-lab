@@ -1,46 +1,36 @@
 /*
- * Theme overrides — applied via <html data-theme="<id>">.
+ * Theme overrides, applied via <html data-theme="<id>">.
  *
- * Default values live in `styles.css` (@theme block, slate — a neutral
- * placeholder, not a design choice). Every app should define its OWN theme
- * before first deploy: copy the example block below, rename the selector,
- * and set colors that fit the product. Shape comes from `--radius`.
- *
- * To add a theme:
- *   1. Add a `[data-theme="my-id"] { ... }` block overriding the shadcn
- *      tokens below. If the theme is light, include `color-scheme: light;`
- *      so native form controls (calendar icons, scrollbars) match.
- *   2. Add an entry to `src/themes.ts` so it shows up in the typed catalog.
- *   3. Add the theme's --color-background to the first-paint <style> block
- *      in index.html so the pre-CSS frame matches (no white flash).
- *   4. Switch to it via `data-theme` on <html> in index.html.
+ * `orbit` is Orbit Lab's only theme (see DESIGN.md): near-black navy
+ * dominant, desaturated blue-grey secondary, one warm amber accent used for
+ * actions, focus and scores. Contrast on --color-background:
+ *   foreground 17.6:1, muted-foreground 7.4:1, primary 11.9:1.
  */
 
-/* Paper — light example theme; shows the full token contract incl.
- * `color-scheme: light`. Replace or delete it once the app has its own. */
-[data-theme="paper"] {
-  color-scheme: light;
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
-  --color-card: #fafafa;
-  --color-card-foreground: #0a0a0a;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0a0a0a;
-  --color-primary: #171717;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #0a0a0a;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #525252;
-  --color-accent: #e5e5e5;
-  --color-accent-foreground: #0a0a0a;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #e5e5e5;
-  --color-input: #e5e5e5;
-  --color-ring: #171717;
-  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.016);
-  --shadow-card-hover: 0 2px 8px 0 rgba(0, 0, 0, 0.032);
-  --color-shell: #fafafa;
-  --color-shell-panel: #ffffff;
+[data-theme="orbit"] {
+  color-scheme: dark;
+  --color-background: #060a13;
+  --color-foreground: #e7ecf5;
+  --color-card: #0c1322;
+  --color-card-foreground: #e7ecf5;
+  --color-popover: #0e1628;
+  --color-popover-foreground: #e7ecf5;
+  --color-primary: #ffb547;
+  --color-primary-foreground: #1b1204;
+  --color-secondary: #16213a;
+  --color-secondary-foreground: #e7ecf5;
+  --color-muted: #111a2d;
+  --color-muted-foreground: #94a0b8;
+  --color-accent: #1a2742;
+  --color-accent-foreground: #e7ecf5;
+  --color-destructive: #f06a5c;
+  --color-destructive-foreground: #1b0604;
+  --color-border: #1d2940;
+  --color-input: #24324d;
+  --color-ring: #ffb547;
+  --radius: 0.625rem;
+  --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow-card-hover: 0 0 0 1px rgba(255, 181, 71, 0.35), 0 12px 40px -12px rgba(255, 181, 71, 0.25);
+  --color-shell: #060a13;
+  --color-shell-panel: #0c1322;
 }
