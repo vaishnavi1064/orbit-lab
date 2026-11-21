@@ -177,3 +177,45 @@ friendly error.
 - `npx deepspace add --list` checked: no feature fits the core loop
   (`tasks` is a claim/grade workflow, `landing` is a skeleton the design docs
   say to rewrite). Nothing added from it.
+
+## Phase 1: shell, auth, tracks, starfield (deployed)
+
+Live: https://orbit-lab.app.space (release `rel_01M7YMB51JK7ZCADDYDE8J77ZR`,
+source claimed: `github · vaishnavi1064/orbit-lab`, clean worktree).
+
+Built
+- `orbit` theme (src/themes.css), the only theme; `slate`/`paper` placeholders
+  removed. Fonts: Space Grotesk / Inter / IBM Plex Mono via Google Fonts.
+- `Starfield` canvas: 3 depth layers, drift, pointer+scroll parallax, pauses
+  on hidden tab, single static draw under reduced motion. Colors read from
+  CSS tokens.
+- Static landing (`src/pages/index.tsx`, prerendered) with the Design
+  Direction block, orbit hero (SVG, SMIL motion added only after mount and
+  only without reduced motion so prerender HTML matches hydration), asymmetric
+  track bento, flight-plan section with a React mock of the debrief panel.
+- App shell: rebuilt Navigation (kept scaffold test ids), starfield behind the
+  app, `MotionConfig reducedMotion="user"`, `/home` hub (data-forward), track
+  page shell at `/track/:id` under `(protected)`.
+- Design gates from `/design/anti-ai-gate` and `/design/product-polish`: all
+  clean. Only advisory hits are the starfield's rAF calls, which are gated by
+  `useReducedMotion()`.
+
+Bugs hit and fixes
+- Headline wrapped to 4 lines at 1440px. Fix: wider text column and one
+  `block lg:whitespace-nowrap` span per sentence, so it is two lines on desktop.
+- Hero radial glow showed a hard rectangular edge (the gradient extended past
+  its box). Removed it; the SVG atmosphere halo already carries the glow.
+- Debrief mock header ran together on mobile (`DEBRIEFMISSION 04`). Fix:
+  `flex-wrap` with a gap.
+- Track cards were too tall on phones. Min-heights are now desktop-only.
+- `node` could not resolve `@playwright/test` from a script in the scratchpad;
+  moved the screenshot helper into `tests/tools/shot.mjs`.
+
+Unsure / notes
+- Console shows a Chromium warning, `Unrecognized feature: 'document-domain'`,
+  from the scaffold's `public/_headers` Permissions-Policy. It is a warning,
+  not an error, and harmless; I left the scaffold's security headers as they are.
+- `deepspace test screenshot` only captures signed-out views. Signed-in
+  screenshots will use the Playwright test fixture in later phases.
+- The CLI's `deploy` only claims GitHub when a GitHub remote is selected;
+  confirmed beforehand with `deepspace status` (`sourceInference: github`).
