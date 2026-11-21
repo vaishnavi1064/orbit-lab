@@ -6,6 +6,9 @@
  *   - the server refuses B's debrief/upvote before B submits
  *   - after both submit, answers and upvotes appear live for both (no reload)
  *   - self-upvote and double upvote are refused
+ *   - the Crew Log is anonymous: "Crew member N" by submission order, "You"
+ *     for your own entry, and no other user's name or email ever reaches a
+ *     browser (no `displayName` on answers at all)
  */
 import type { Page } from '@playwright/test'
 import { test, expect, loadAllTestAccounts } from 'deepspace/testing'
@@ -83,6 +86,16 @@ test('Crew Log visibility, live sync, and upvote rules', async ({ users }) => {
   await expect(a.page.getByTestId('crew-entry')).toHaveCount(2)
   await expect(b.page.getByTestId('crew-entry')).toHaveCount(2)
 
+  // Anonymous labels: A answered first, B second. Own entry reads "You".
+  const label = (p: Page, sel: string) => p.locator(`[data-testid=crew-entry]${sel} [data-testid=crew-label]`)
+  await expect(label(a.page, '[data-own]')).toHaveText('You')
+  await expect(label(b.page, '[data-own]')).toHaveText('You')
+  await expect(label(a.page, ':not([data-own])')).toHaveText('Crew member 2')
+  await expect(label(b.page, ':not([data-own])')).toHaveText('Crew member 1')
+  for (const [viewer, other] of [[a, b], [b, a]] as const) {
+    await expect(viewer.page.getByTestId('crew-log')).not.toContainText(other.name)
+  }
+
   // A upvotes B via the UI; B sees the count change live.
   const bEntryOnA = a.page.locator('[data-testid=crew-entry]', { hasText: `BRAVO-${run}` })
   await bEntryOnA.getByTestId('upvote-button').click()
@@ -113,6 +126,22 @@ test('Crew Log visibility, live sync, and upvote rules', async ({ users }) => {
   expect(cWire).not.toContain(`ALPHA-${run}`)
   expect(cWire).not.toContain(`BRAVO-${run}`)
   await expect(c.page.getByTestId('crew-log-locked')).toBeVisible()
+
+  // Privacy on the WIRE: no browser ever received another user's name or
+  // email, and answers carry no displayName field at all.
+  const taps = [
+    { who: a, tap: tapA },
+    { who: b, tap: tapB },
+    { who: c, tap: tapC },
+  ]
+  for (const { who, tap } of taps) {
+    const wire = tap.frames.join('\n')
+    expect(wire).not.toContain('"displayName"')
+    for (const other of [a, b, c].filter((u) => u !== who)) {
+      expect(wire, `${who.name}'s browser received ${other.name}'s name`).not.toContain(other.name)
+      expect(wire, `${who.name}'s browser received ${other.name}'s email`).not.toContain(other.email)
+    }
+  }
 
   if (SHOTS) {
     await a.page.getByTestId('crew-log').scrollIntoViewIfNeeded()
