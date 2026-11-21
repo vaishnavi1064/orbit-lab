@@ -166,4 +166,4 @@ Deploy: `npx deepspace deploy`. This app's source of truth is GitHub
   costs O(n) writes per submit, which is fine at this scale and needs no
   extra room types.
 - **Moderation and admin tools, payments, real-time chat, native apps.** Out
-  of scope by design (see SPEC.md non-goals).
+  of scope by design (see spec.md non-goals).
