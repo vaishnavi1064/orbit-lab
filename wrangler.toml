@@ -33,7 +33,7 @@ APP_NAME = "orbit-lab"
 # Expo client, for example: "myapp://auth/callback".
 NATIVE_AUTH_REDIRECT_URIS = ""
 # Orbit Lab AI switch (NOT a secret): "mock" = canned data, "live" = DeepSpace integrations.
-AI_MODE = "mock"
+AI_MODE = "live"
 # Mock-only: "true" makes the mock model return malformed JSON to test the error path.
 AI_MOCK_BAD_JSON = "false"
 
