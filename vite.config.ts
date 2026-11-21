@@ -1,4 +1,6 @@
 import { fileURLToPath } from 'node:url'
+import { resolve as resolvePath } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import generouted from '@generouted/react-router/plugin'
@@ -8,6 +10,10 @@ import { deepspaceBuild } from 'deepspace/build'
 import { prerender } from './prerender.ts'
 
 const appDir = fileURLToPath(new URL('.', import.meta.url))
+// Canonical on-disk casing of the project root (Windows: `D:\space` even when
+// the shell says `d:\space`). Every path below derives from it so no module
+// can be resolved under two spellings and bundled twice.
+const ROOT = realpathSync.native(process.cwd())
 
 export default defineConfig({
   plugins: [
@@ -48,9 +54,15 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Resolve from process.cwd(), NOT import.meta.url. On Windows the two can
+      // disagree on drive-letter case (d:\ vs D:\); modules reached through
+      // '@/...' then resolved `deepspace` under a differently-cased path, the
+      // bundler emitted the SDK twice, and RecordScope/useQuery used separate
+      // React contexts ("No scope found") in production only. See NOTES.md.
+      '@': resolvePath(ROOT, 'src'),
     },
   },
+  root: ROOT,
   optimizeDeps: {
     // generouted loads routes via `import.meta.glob`, which Vite's esbuild dep-scanner
     // does not evaluate — so every dep reachable only through the page tree (UI libs,

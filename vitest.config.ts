@@ -1,8 +1,12 @@
 import { fileURLToPath } from 'node:url'
+import { resolve as resolvePath } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import { appIdDefine } from 'deepspace/build'
 
 const appDir = fileURLToPath(new URL('.', import.meta.url))
+// Canonical root casing on Windows (see vite.config.ts).
+const ROOT = realpathSync.native(process.cwd())
 
 // Dedicated Vitest config, intentionally standalone (Vitest prefers this file
 // over vite.config.ts, so the app build config is never loaded for unit tests).
@@ -18,12 +22,14 @@ const appDir = fileURLToPath(new URL('.', import.meta.url))
 // Unit tests live next to their source. The Node-only prerender test stays at
 // the root so it does not enter the browser/Worker TypeScript project in src/.
 export default defineConfig({
+  root: ROOT,
   // Same app id the bundle is built with, from the same wrangler config —
   // so a unit test importing src/constants.ts sees what the browser will.
   define: appIdDefine({ appDir }),
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // cwd-relative for the same drive-letter-case reason as vite.config.ts.
+      '@': resolvePath(ROOT, 'src'),
     },
   },
   test: {
