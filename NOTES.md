@@ -628,3 +628,20 @@ keep the live-generated Huygens scenario and its answer key. Never touch
 Left in production afterwards: Huygens (planets #2, no answers) and the new
 ISS Ops scenario with one Crew A answer from the smoke run. The next Planets
 scenario will be numbered #3 (numbering is max + 1).
+
+Follow-up, same day (owner confirmed): removed that smoke-run answer with
+the same pattern. A read-only inventory found exactly one answer
+(`1795282787607_m4y4hd`, Crew A, score 0) and no upvotes. A temporary action
+(7338f65, release rel_01M7ZKR57GH8D9S1BV412YDGEG) with that one id hard-coded
+and an expected state of 2 scenarios, 2 answer keys, 1 answer and 0 upvotes
+dry-ran clean (unexpected 0), deleted 1 answer, and a second dry run showed
+0 answers, 0 upvotes, 2 answer keys, 2 scenarios. The action was removed
+(c9aa317, src identical to 0ec3c96) and redeployed clean
+(rel_01M7ZKT28CVH7S7Y5N11JW4S3K); the signed-in call now returns 404.
+
+Production now holds: 2 scenarios (Huygens planets #2, "Scrubber Offline
+During Cabin Repair" iss-ops #1), their 2 answer keys, 0 answers, 0 upvotes.
+
+Rule from the owner from here on: do not run any script that writes to
+production (prod-smoke, prod-live, prod-crew, prod-security) unless asked.
+The owner does the remaining production checks by hand.
