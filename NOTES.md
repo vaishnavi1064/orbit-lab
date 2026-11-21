@@ -426,3 +426,44 @@ Unsure / notes
 - fal CDN URLs (`v3*.fal.media`) are not guaranteed permanent. The `onError`
   fallback covers expiry; persisting images to R2 would remove the risk but
   is out of scope for SPEC.
+
+## Phase 6: /me progress, polish, error states (deployed)
+
+Live release `rel_01M7YQ41AT0ZHAHRFZAGRHMY9C` (clean worktree, AI_MODE=mock).
+
+Built
+- `/me` flight record: Flown / Avg score / Upvotes received; per-track rows
+  (glyph, flown count, average-score meter animated with `scaleX` for 60fps,
+  `role="meter"` with aria values); past transmissions newest first, each
+  linking back to its debrief. All derived from the user's own `answers`
+  (SPEC: progress is derived, no extra collection).
+- Nav: "Progress" item; on phones the wordmark collapses to the orbit mark
+  (text stays for screen readers).
+- Error states: `LoadError` (inline "Lost contact with Mission Control" +
+  Reconnect) on track, scenario and /me pages when a live query errors;
+  themed 404 ("Signal lost // 404"); action failures already show inline
+  (answer box, Next briefing, Request briefing) or as toasts (upvotes); AI
+  failures surface as friendly AiError text; images fall back to gradient.
+- Accessibility: skip-to-content link, `main` is focusable target.
+
+Tests
+- `tests/progress.spec.ts`: all five track rows, a past answer opens its
+  debrief, Progress nav link, zero console errors; 390 + 1440 screenshots.
+- Full e2e suite: 15 passed (1 screenshot-only test skipped). Design gates
+  (anti-AI grep, product-polish absence/presence) clean. Production smoke ok.
+
+Bugs hit and fixes
+- Mobile: wordmark wrapped to two lines next to two nav links; track names
+  truncated by the "flown" label. Compact wordmark on phones; flown label
+  moves under the bar.
+- **Process bug (mine):** my commit chain piped each step through `grep`,
+  which hid a correctly-refused commit (me.tsx depended on a file in the next
+  commit). The chain continued and `deepspace deploy` shipped a dirty tree
+  (GitHub source deploys the working tree; the release was flagged `dirty`).
+  Fixed by committing the missing files (type-checked), confirming a clean
+  tree, and redeploying: release `rel_01M7YQ41AT0ZHAHRFZAGRHMY9C` is clean.
+  All later command chains use `set -o pipefail`.
+
+Unsure / notes
+- The /me title uses the first word of the display name ("Crew's missions."
+  for test accounts named "Crew C"); real Google/GitHub names read naturally.
