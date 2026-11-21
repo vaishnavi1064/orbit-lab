@@ -647,7 +647,7 @@ Rule from the owner from here on: do not run any script that writes to
 production (prod-smoke, prod-live, prod-crew, prod-security) unless asked.
 The owner does the remaining production checks by hand.
 
-## Anonymous Crew Log (built and tested locally; NOT deployed yet)
+## Anonymous Crew Log (deployed after the owner said "deploy")
 
 Owner request: show "Crew member N" (N = order of submission for that
 scenario, from 1) instead of real names, "You" for your own entry, and stop
@@ -695,4 +695,14 @@ restored to live before committing
   bad-JSON); vitest 21 passed; tsc clean. Screenshots at 1440 and 390 show
   "1 You / Crew member 2" for A and "2 You / Crew member 1" for B.
 
-Deploy is waiting for the owner's "deploy".
+Deployed from 13620a9 (clean tree, AI_MODE live): release
+rel_01M7ZS37PPGPF6QHPKFQPT54SX. Read-only checks only, per the owner:
+- GET /, /home, /api/auth/ok: 200. `deepspace logs --level error` since
+  the deploy: 0 lines.
+- Live schema (`agent invoke schema_describe`): `answers` columns have no
+  `displayName`; `users` has `roster: "read-policy"`.
+- Signed in as Crew A and as Crew C, opened /home, the Huygens scenario and
+  /me with no clicks (0 action POSTs): every `user.list` frame held exactly
+  one user (the viewer), no other user's name anywhere on the wire, no
+  `"displayName"`, 0 console errors. Only side effect: the platform refreshes
+  the viewer's own `lastSeenAt` when a signed-in page connects.
