@@ -279,6 +279,78 @@ export async function findSources(
   return picked
 }
 
+// ── generateImage (fal) ─────────────────────────────────────────────────────
+
+export const IMAGE_MODEL = 'fal-ai/flux/schnell'
+
+const TRACK_SCENE: Record<TrackId, string> = {
+  'iss-ops': 'inside or outside a modular space station in low Earth orbit, Earth below',
+  'spacecraft-launch': 'a launch vehicle and its exhaust plume, launch complex or high atmosphere',
+  'orbits-gravity': 'spacecraft in orbit, curved planetary horizon, faint orbital paths',
+  'black-holes-stars': 'deep space astrophysics scene, stars, accretion glow, nebula',
+  planets: 'a planetary surface or atmosphere seen from a lander or orbiter',
+}
+
+export function imagePrompt(title: string, track: TrackId): string {
+  // DeepSpace design rule 9: every image prompt carries the no-text clause.
+  return [
+    `Cinematic illustration for a space mission briefing titled "${title}".`,
+    `Scene: ${TRACK_SCENE[track]}.`,
+    'Photorealistic, wide establishing shot, dramatic low-key lighting, deep navy shadows with warm amber highlights, film grain.',
+    'no text, no words, no letters, no writing, no logos',
+  ].join(' ')
+}
+
+/**
+ * One illustration per scenario. Runs in a background job, never in the
+ * request path. Returns null on ANY problem; the UI then keeps its gradient.
+ */
+export async function generateImage(
+  ctx: AiContext,
+  input: { title: string; track: TrackId },
+  poll = { intervalMs: 1500, attempts: 30 },
+): Promise<string | null> {
+  if (!isLive(ctx.env)) return null
+  try {
+    const started = await ctx.integrate('fal/run-model', {
+      model_id: IMAGE_MODEL,
+      maxCostUsd: 0.05,
+      input: {
+        prompt: imagePrompt(input.title, input.track),
+        image_size: 'landscape_16_9',
+        num_inference_steps: 4,
+        num_images: 1,
+        output_format: 'jpeg',
+        enable_safety_checker: true,
+      },
+    })
+    if (!started.success) {
+      console.warn(`[ai] fal/run-model failed: ${started.error}`)
+      return null
+    }
+    const jobId = (started.data as { jobId?: string }).jobId
+    if (!jobId) return null
+
+    for (let i = 0; i < poll.attempts; i++) {
+      await new Promise((r) => setTimeout(r, poll.intervalMs))
+      const res = await ctx.integrate('fal/get-result', { request_id: jobId })
+      if (!res.success) continue
+      const data = res.data as { status?: string; output?: { images?: Array<{ url?: string }> }; error?: unknown }
+      const url = data.output?.images?.[0]?.url
+      if (typeof url === 'string' && url.startsWith('https://')) return url
+      if (data.error || /fail|error|cancel/i.test(data.status ?? '')) {
+        console.warn(`[ai] fal job ${jobId} ended without an image: ${data.status}`)
+        return null
+      }
+    }
+    console.warn(`[ai] fal job ${jobId} timed out`)
+    return null
+  } catch (err) {
+    console.warn(`[ai] generateImage threw: ${err instanceof Error ? err.message : String(err)}`)
+    return null
+  }
+}
+
 // ── gradeAnswer ─────────────────────────────────────────────────────────────
 
 export async function gradeAnswer(

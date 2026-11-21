@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AiError, extractJson, findSources, generateScenarioContent, gradeAnswer, isReputable, mockGrade, type AiContext } from './ai'
+import {
+  AiError,
+  extractJson,
+  findSources,
+  generateImage,
+  generateScenarioContent,
+  gradeAnswer,
+  isReputable,
+  mockGrade,
+  type AiContext,
+} from './ai'
 import { MOCK_SCENARIOS } from './mock-data'
 
 const mockCtx = (env: AiContext['env']): AiContext => ({
@@ -75,6 +85,49 @@ describe('findSources', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const integrate = vi.fn(async () => ({ success: false as const, error: 'upstream down' }))
     expect(await findSources({ env: { AI_MODE: 'live' }, integrate }, { track: 'planets', existingTitles: [] })).toEqual([])
+    warn.mockRestore()
+  })
+})
+
+describe('generateImage', () => {
+  const fast = { intervalMs: 1, attempts: 3 }
+
+  it('mock: no image, so the UI keeps its gradient', async () => {
+    expect(await generateImage(mockCtx({ AI_MODE: 'mock' }), { title: 't', track: 'planets' })).toBeNull()
+  })
+
+  it('live: starts a fal run, polls, returns the image url', async () => {
+    const replies: Record<string, unknown[]> = {
+      'fal/run-model': [{ jobId: 'job-1', status: 'IN_QUEUE' }],
+      'fal/get-result': [{ status: 'IN_PROGRESS' }, { status: 'COMPLETED', output: { images: [{ url: 'https://v3.fal.media/x.jpg' }] } }],
+    }
+    const integrate = vi.fn(async (endpoint: string, _body?: unknown) => ({ success: true as const, data: replies[endpoint].shift() }))
+    const url = await generateImage({ env: { AI_MODE: 'live' }, integrate }, { title: 'Descent to Titan', track: 'planets' }, fast)
+    expect(url).toBe('https://v3.fal.media/x.jpg')
+    const body = integrate.mock.calls[0][1] as unknown as { model_id: string; input: { prompt: string } }
+    expect(body.model_id).toBe('fal-ai/flux/schnell')
+    expect(body.input.prompt).toContain('no text, no words, no letters, no writing, no logos')
+  })
+
+  it('live: provider failure, error status, or timeout -> null (never throws)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const down = vi.fn(async () => ({ success: false as const, error: 'insufficient credits' }))
+    expect(await generateImage({ env: { AI_MODE: 'live' }, integrate: down }, { title: 't', track: 'planets' }, fast)).toBeNull()
+
+    const failed = vi.fn(async (e: string) =>
+      e === 'fal/run-model' ? { success: true as const, data: { jobId: 'j' } } : { success: true as const, data: { status: 'FAILED', error: 'nsfw' } },
+    )
+    expect(await generateImage({ env: { AI_MODE: 'live' }, integrate: failed }, { title: 't', track: 'planets' }, fast)).toBeNull()
+
+    const slow = vi.fn(async (e: string) =>
+      e === 'fal/run-model' ? { success: true as const, data: { jobId: 'j' } } : { success: true as const, data: { status: 'IN_QUEUE' } },
+    )
+    expect(await generateImage({ env: { AI_MODE: 'live' }, integrate: slow }, { title: 't', track: 'planets' }, fast)).toBeNull()
+
+    const throws = vi.fn(async () => {
+      throw new Error('network')
+    })
+    expect(await generateImage({ env: { AI_MODE: 'live' }, integrate: throws }, { title: 't', track: 'planets' }, fast)).toBeNull()
     warn.mockRestore()
   })
 })
