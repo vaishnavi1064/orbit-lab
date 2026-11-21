@@ -24,7 +24,9 @@ Stars, Planets.
    expert answer. You get a score ring, what you got right, what you missed,
    the expert approach, and the sources.
 4. **Crew Log.** Only now can you read the other answers for that scenario.
-   New answers and upvotes arrive live.
+   New answers and upvotes arrive live. It is anonymous: other people appear
+   as "Crew member N" (N = the order they answered that scenario, from 1),
+   and your own entry as "You". Your Progress page is private to you.
 
 ## Architecture
 
@@ -80,6 +82,13 @@ flowchart LR
   `read: 'shared'`. `submitAnswer` keeps the list in sync. The DO re-checks
   read access on every change and pushes newly readable answers to connected
   clients, which is what makes the Crew Log live.
+- **Anonymous Crew Log, enforced on the wire.** Answers store no author
+  name, only the opaque `userId` the access rules need; labels are computed
+  in the browser from submission order (`src/lib/crew.ts`). The users schema
+  sets `roster: 'read-policy'`, so the SDK's `user.list` roster sends each
+  member only their own row instead of every user's `{ id, name }`, which
+  would otherwise let anyone map a `userId` back to a name. The 3-user e2e
+  test asserts that no browser receives another user's name or email.
 - **Integrations** are called only server-side through the DeepSpace proxy.
   No provider SDKs, no API keys in the app, and the scaffold default that
   every integration requires a signed-in caller is kept.
@@ -131,7 +140,7 @@ Tests:
 npx deepspace test accounts create --email you-a-<id>@deepspace.test --name "Crew A" --password-stdin
 # ...also "Crew B" and "Crew C" (emails are global, so add a unique suffix)
 npx deepspace test run e2e      # Playwright: core loop, 3-user Crew Log, progress, smoke
-npx vitest run                  # unit tests for src/server/ai.ts
+npx vitest run                  # unit tests: src/server/ai.ts, src/lib/crew.ts
 ```
 
 On Windows, run `vitest` from the canonical drive-letter case (for example
