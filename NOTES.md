@@ -467,3 +467,42 @@ Bugs hit and fixes
 Unsure / notes
 - The /me title uses the first word of the display name ("Crew's missions."
   for test accounts named "Crew C"); real Google/GitHub names read naturally.
+
+## Step 4: switch to live AI (deployed)
+
+Release `rel_01M7YQ7WW2D239NX3GF4AT9Y74`, `AI_MODE = "live"` in wrangler.toml.
+
+Before switching
+- Preflight: one 20-token call confirmed `claude-sonnet-5-5` is accepted by
+  `anthropic/chat-completion`.
+- Bad-JSON acceptance test in the real UI (`tests/bad-json.spec.ts`, mock
+  with `AI_MOCK_BAD_JSON="true"` locally, then set back): the request/grading
+  error shows inline ("Houston received a garbled transmission"), the draft is
+  kept, the button re-enables, no page errors.
+
+Live results on https://orbit-lab.app.space (`tests/tools/prod-live.mjs`)
+- generateScenario (exa + Claude): 10.8s. "Reading Huygens Through Titan's
+  Winds", 137 words, specific role, ends with a question. Sources: NASA
+  "Huygens' Path to Titan", NASA Science "Huygens Probe", NASA podcast on
+  Dragonfly: real and on topic.
+- fal image: background job finished and the image swapped in live 4.4s
+  after the page opened. No text in the image.
+- Grading: 3.4s. Generic answer -> 0/10 with specific misses. A strong,
+  on-topic answer from a second user -> every rubric point under "Got right",
+  verdict "Flight director signs off" (score >= 9). An off-topic answer (Titan
+  text on a Mars briefing) was flagged by the grader as answering the wrong
+  scenario.
+- Cache/reuse: the second user's request returned the oldest scenario they
+  had not answered first (a mock-era one), then the SAME live Huygens
+  scenario A generated (same id, 1.1s, image already present). No second
+  generation.
+- Worker logs: no `[ai]` retry warnings, AppJobRoom alarm `ok`, every action
+  logged with its caller.
+- Spend so far (whole build incl. probes): fal $0.21 (6 calls), anthropic
+  $0.09, exa $0.02. Free plan, 468/500 credits left.
+
+Notes
+- Production still contains scenarios/answers created by my smoke tests
+  (mock-era scenarios, answers with ALPHA-/BRAVO- markers). Real users who
+  answer those scenarios will see test answers in the Crew Log. Deleting them
+  is irreversible, so I am leaving that decision to the owner.
