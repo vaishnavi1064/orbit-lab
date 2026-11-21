@@ -193,6 +193,92 @@ export function mockSourcesFor(title: string): Source[] {
   return base?.sources ?? []
 }
 
+// ── findSources (exa) ───────────────────────────────────────────────────────
+
+/** Reputable hosts only (SPEC: NASA, ESA, universities). Matched by suffix. */
+export const SOURCE_HOSTS = [
+  'nasa.gov', 'esa.int', 'jaxa.jp', 'eso.org', 'stsci.edu', 'noirlab.edu', 'nrao.edu', 'caltech.edu',
+  'mit.edu', 'harvard.edu', 'berkeley.edu', 'arizona.edu', 'colorado.edu', 'cornell.edu', 'princeton.edu',
+  'ox.ac.uk', 'cam.ac.uk', 'ucl.ac.uk', 'noaa.gov', 'usgs.gov', 'cnes.fr', 'dlr.de', 'asc-csa.gc.ca',
+]
+
+/** Sub-topics rotate so successive scenarios in a track cover new ground. */
+const TOPICS: Record<TrackId, string[]> = {
+  'iss-ops': ['ISS life support and air revitalization', 'spacewalk EVA suit emergency', 'ISS debris avoidance maneuver', 'ISS cabin depressurization leak response', 'crew medical emergency in orbit', 'ISS power system solar arrays failure'],
+  'spacecraft-launch': ['launch abort system crew escape', 'max dynamic pressure and throttling', 'rocket staging and engine out capability', 'launch weather constraints lightning', 'propellant loading and scrub decisions', 'reentry heat shield and capsule splashdown'],
+  'orbits-gravity': ['orbital rendezvous and phasing', 'Hohmann transfer orbit maneuver', 'gravity assist flyby trajectory', 'atmospheric drag and orbital decay', 'geostationary orbit station keeping', 'Lagrange points spacecraft halo orbit'],
+  'black-holes-stars': ['tidal disruption event black hole', 'supernova core collapse massive star', 'neutron star pulsar observations', 'event horizon telescope imaging black hole', 'gravitational waves black hole merger', 'red giant star stellar evolution'],
+  planets: ['Mars rover dust storm power', 'Titan atmosphere lander', 'Venus surface probe extreme conditions', 'Europa subsurface ocean mission', 'Jupiter radiation belts spacecraft', 'asteroid sample return mission'],
+}
+
+export function topicFor(track: TrackId, existingCount: number): string {
+  const list = TOPICS[track]
+  return list[existingCount % list.length]
+}
+
+export function isReputable(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:') return false
+    const host = u.hostname.toLowerCase()
+    return SOURCE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
+  } catch {
+    return false
+  }
+}
+
+interface ExaResult {
+  title?: string
+  url?: string
+  text?: unknown
+  highlights?: unknown
+}
+
+/**
+ * 2-3 reputable sources for the next scenario in a track, with short excerpts
+ * the model can ground on. Never throws: search problems mean fewer sources,
+ * not a failed briefing.
+ */
+export async function findSources(
+  ctx: AiContext,
+  input: { track: TrackId; existingTitles: string[] },
+): Promise<GroundingSource[]> {
+  if (!isLive(ctx.env)) {
+    const next = pickMockScenario(input.track, input.existingTitles)
+    return mockSourcesFor(next.title)
+  }
+  const topic = topicFor(input.track, input.existingTitles.length)
+  const res = await ctx.integrate('exa/search', {
+    query: `${topic}: how mission teams and scientists handle it`,
+    numResults: 8,
+    type: 'auto',
+    includeDomains: SOURCE_HOSTS,
+    contents: { highlights: { numSentences: 3, highlightsPerUrl: 2, query: topic }, text: { maxCharacters: 1200 } },
+  })
+  if (!res.success) {
+    console.warn(`[ai] exa/search failed: ${res.error}`)
+    return []
+  }
+  const results = ((res.data as { results?: ExaResult[] }).results ?? []).filter(
+    (r): r is ExaResult & { url: string } =>
+      typeof r.url === 'string' && isReputable(r.url) && !/\.pdf($|[?#])/i.test(r.url),
+  )
+  const seen = new Set<string>()
+  const picked: GroundingSource[] = []
+  for (const r of results) {
+    const key = r.url.replace(/[#?].*$/, '').replace(/\/$/, '')
+    if (seen.has(key)) continue
+    seen.add(key)
+    const highlights = Array.isArray(r.highlights) ? r.highlights.filter((h): h is string => typeof h === 'string') : []
+    const excerpt = (highlights.length ? highlights.join(' ') : typeof r.text === 'string' ? r.text : '').slice(0, 900)
+    // "Article | Site | Org" -> "Article"
+    const title = (r.title || new URL(r.url).hostname).split(' | ')[0].trim().slice(0, 140)
+    picked.push({ title, url: r.url, excerpt })
+    if (picked.length === 3) break
+  }
+  return picked
+}
+
 // ── gradeAnswer ─────────────────────────────────────────────────────────────
 
 export async function gradeAnswer(
