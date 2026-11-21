@@ -29,12 +29,14 @@ export type AnswerKeyData = {
   rubric: string[]
 }
 
-/** `answers` record data. */
+/**
+ * `answers` record data. Deliberately no author name: the Crew Log is
+ * anonymous ("Crew member N"), so names are never stored or sent to others.
+ */
 export type AnswerData = {
   scenarioId: string
   track: TrackId
   userId: string
-  displayName: string
   text: string
   score: number
   gotRight: string[]

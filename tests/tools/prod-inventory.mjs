@@ -34,7 +34,8 @@ try {
     )
     await page.goto(`${baseURL}/me`)
     await page.waitForTimeout(5000)
-    const userId = seen.find((r) => r.data.userId && r.data.text && r.data.displayName)?.data.userId
+    // /me loads only this account's own answers, so any answer row is its own.
+    const userId = seen.find((r) => r.data.userId && typeof r.data.text === 'string' && r.data.scenarioId)?.data.userId
     const ownScenarioIds = [...new Set(seen.filter((r) => r.data.text && r.data.userId === userId).map((r) => r.data.scenarioId))]
     for (const sid of ownScenarioIds) {
       await page.goto(`${baseURL}/scenario/${sid}`)

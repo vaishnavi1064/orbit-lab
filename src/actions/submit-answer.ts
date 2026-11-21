@@ -9,7 +9,7 @@
 import type { ActionResult } from 'deepspace/worker'
 import { MAX_ANSWER_CHARS, type AnswerData, type AnswerKeyData, type Debrief, type ScenarioData } from '../lib/types'
 import { gradeAnswer } from '../server/ai'
-import { aiContext, asArray, displayNameFor, fail, guarded, stringParam, type Ctx } from './shared'
+import { aiContext, asArray, fail, guarded, stringParam, type Ctx } from './shared'
 import { syncCrew } from './crew'
 
 export async function submitAnswer(ctx: Ctx): Promise<ActionResult<Debrief>> {
@@ -51,7 +51,6 @@ export async function submitAnswer(ctx: Ctx): Promise<ActionResult<Debrief>> {
       scenarioId,
       track: scenario.track,
       userId: ctx.userId,
-      displayName: await displayNameFor(ctx),
       text,
       score: grade.score,
       gotRight: grade.gotRight,

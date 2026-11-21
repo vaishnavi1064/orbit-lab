@@ -66,7 +66,6 @@ export const answersSchema: CollectionSchema = {
     { name: 'scenarioId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
     { name: 'track', storage: 'text', interpretation: 'plain', required: true, immutable: true },
     { name: 'userId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
-    { name: 'displayName', storage: 'text', interpretation: 'plain', default: '' },
     { name: 'text', storage: 'text', interpretation: 'plain', required: true },
     { name: 'score', storage: 'number', interpretation: 'plain', required: true },
     { name: 'gotRight', storage: 'text', interpretation: { kind: 'json' }, default: [] },

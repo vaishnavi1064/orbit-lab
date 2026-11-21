@@ -46,9 +46,3 @@ export async function guarded<T>(name: string, run: () => Promise<ActionResult<T
     return fail('Something went wrong on our side. Please try again.')
   }
 }
-
-export async function displayNameFor(ctx: Ctx): Promise<string> {
-  const res = await ctx.tools.get<{ name?: string }>('users', ctx.userId)
-  const name = res.success ? res.data.record.data.name?.trim() : ''
-  return name || 'Crew member'
-}
