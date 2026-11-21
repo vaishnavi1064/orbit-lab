@@ -18,6 +18,7 @@ import { AnswerConsole } from '@/components/mission/AnswerConsole'
 import { GradingState } from '@/components/mission/GradingState'
 import { DebriefPanel } from '@/components/mission/DebriefPanel'
 import { CrewLog, CrewLogLocked } from '@/components/crew/CrewLog'
+import { LoadError } from '@/components/space/LoadError'
 import { Button, EmptyState } from '@/components/ui'
 
 const fade = {
@@ -73,6 +74,13 @@ export default function ScenarioPage() {
 
   const next = useRequestBriefing(track?.id)
 
+  if (status === 'error' || mineStatus === 'error') {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-8">
+        <LoadError />
+      </div>
+    )
+  }
   if (status === 'loading' || mineStatus === 'loading') return <ScenarioSkeleton />
 
   if (!scenario || !track) {

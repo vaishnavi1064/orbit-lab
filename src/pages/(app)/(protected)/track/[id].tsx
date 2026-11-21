@@ -9,13 +9,14 @@ import { useRequestBriefing } from '@/hooks/useRequestBriefing'
 import { PageHeader } from '@/components/space/PageHeader'
 import { TrackGlyph } from '@/components/space/TrackGlyph'
 import { MissionRow } from '@/components/mission/MissionRow'
+import { LoadError } from '@/components/space/LoadError'
 import { Button, EmptyState } from '@/components/ui'
 
 export default function TrackPage() {
   const { id } = useParams()
   const track = getTrack(id)
-  const { records: scenarios, status } = useScenarios(track?.id)
-  const { records: answers, status: answersStatus } = useMyAnswers(track?.id)
+  const { records: scenarios, status, error: scenariosError } = useScenarios(track?.id)
+  const { records: answers, status: answersStatus, error: answersError } = useMyAnswers(track?.id)
   const briefing = useRequestBriefing(track?.id)
 
   const rows = useMemo(() => {
@@ -92,7 +93,11 @@ export default function TrackPage() {
           </div>
         )}
 
-        {loading ? (
+        {status === 'error' || answersStatus === 'error' ? (
+          <div className="p-5">
+            <LoadError message={scenariosError || answersError} />
+          </div>
+        ) : loading ? (
           <ul aria-busy="true" className="divide-y divide-border">
             {[0, 1, 2].map((i) => (
               <li key={i} className="flex items-center gap-6 px-5 py-5">
