@@ -49,6 +49,11 @@ test('core loop: briefing, transmit, debrief; key hidden until submit', async ({
   await page.waitForURL(/\/scenario\//, { timeout: 30_000 })
   await expect(page.getByText('Incoming transmission')).toBeVisible()
   await expect(page.getByTestId('transmit-button')).toBeVisible()
+  // Phase 4: briefing cites reputable sources as real external links.
+  await expect(page.getByText('Grounded in', { exact: true })).toBeVisible()
+  const firstSource = page.locator('article a[target=_blank]').first()
+  await expect(firstSource).toHaveAttribute('href', /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|eso\.org|stsci\.edu|grc\.nasa\.gov)\//)
+  await expect(firstSource).toHaveAttribute('rel', /noopener/)
   if (SHOTS) {
     await page.waitForTimeout(3500)
     await page.screenshot({ path: `${SHOTS}/scenario-brief-1440.png`, fullPage: true })

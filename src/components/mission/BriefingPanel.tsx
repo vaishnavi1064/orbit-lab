@@ -73,7 +73,7 @@ export function BriefingPanel({ scenario, track, animate }: Props) {
 
         {scenario.sources.length > 0 && (
           <div className="mt-6 border-t border-border pt-4">
-            <SourceList sources={scenario.sources} />
+            <SourceList sources={scenario.sources} label="Grounded in" />
           </div>
         )}
       </div>

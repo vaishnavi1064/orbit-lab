@@ -10,7 +10,7 @@
 import type { ActionResult } from 'deepspace/worker'
 import { isTrackId } from '../lib/tracks'
 import type { AnswerData, GenerateScenarioResult, ScenarioData } from '../lib/types'
-import { generateScenarioContent } from '../server/ai'
+import { findSources, generateScenarioContent } from '../server/ai'
 import { aiContext, fail, guarded, type Ctx } from './shared'
 
 /** Spend control: new scenarios a single user may trigger per 24h. */
@@ -45,7 +45,11 @@ export async function generateScenario(ctx: Ctx): Promise<ActionResult<GenerateS
     }
 
     const existingTitles = scenarios.data.records.map((r) => r.data.title)
-    const content = await generateScenarioContent(aiContext(ctx), { track, existingTitles, sources: [] })
+    const ai = aiContext(ctx)
+    // exa first, so the model writes the scenario grounded in real sources.
+    const grounding = await findSources(ai, { track, existingTitles })
+    const content = await generateScenarioContent(ai, { track, existingTitles, sources: grounding })
+    const sources = grounding.map(({ title, url }) => ({ title, url }))
 
     const scenarioId = crypto.randomUUID()
     const key = await ctx.tools.create(
@@ -62,7 +66,7 @@ export async function generateScenario(ctx: Ctx): Promise<ActionResult<GenerateS
       title: content.title,
       briefing: content.briefing,
       imageUrl: '',
-      sources: [],
+      sources,
       generatedBy: ctx.userId,
     }
     const created = await ctx.tools.create('scenarios', scenario, scenarioId)
