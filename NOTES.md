@@ -506,3 +506,59 @@ Notes
   (mock-era scenarios, answers with ALPHA-/BRAVO- markers). Real users who
   answer those scenarios will see test answers in the Crew Log. Deleting them
   is irreversible, so I am leaving that decision to the owner.
+
+## Step 5: security pass (results)
+
+All checks run against production https://orbit-lab.app.space with live AI,
+using `tests/tools/prod-security.mjs`, plus the local Playwright specs.
+
+1. Answer keys and other users' answers are not sent before submitting
+   (actual network payloads: every WebSocket frame and every /api response
+   body the browser received was recorded and searched).
+   - Crew C, who has not answered the Huygens scenario that A and B both
+     answered, opened it: no `answerKeys` records, no correct-answer text (a
+     snippet taken from A's own debrief), and neither A's nor B's answer text
+     appeared anywhere in C's traffic. Crew Log showed "Locked".
+   - Server refused C's `getDebrief` ("Transmit your answer first.") and C's
+     `upvote` ("Transmit your own answer before voting.").
+   - Locally, `tests/crew-log.spec.ts` proves the same for B before B submits
+     and for C throughout, and `tests/core-loop.spec.ts` for the key.
+   - Mechanism: `answerKeys` has `read: false` for every role (never synced);
+     `answers` uses `read: 'shared'` with a server-maintained `crew` list.
+   - Known, accepted: the SDK's `records.list_schemas` message tells every
+     client the column NAMES of all collections (e.g. `correctAnswer`). No
+     values. Schema shape is not secret.
+2. Server rejections (all PASS on production):
+   - double submit -> "You already transmitted an answer for this mission."
+     (also enforced by `uniqueOn` in the DO for concurrent submits)
+   - 1501-char answer -> "Answers are limited to 1500 characters."
+   - non-string answer (`{ $ne: '' }`) -> refused
+   - self-upvote -> "You cannot upvote your own answer."
+   - double upvote -> "You already upvoted this answer." (+ `uniqueOn`)
+   - unauthenticated `POST /api/actions/{generateScenario, submitAnswer,
+     upvote, getDebrief}` -> HTTP 401
+   - unauthenticated `POST /api/integrations/{anthropic/chat-completion,
+     exa/search, fal/run-model}` -> HTTP 401 (scaffold default kept: no
+     `anonymous: true` anywhere in src/integrations.ts)
+   Result: 19/19 checks passed.
+3. Client bundle grep (`vite build`, 32 files in dist/client) for
+   `sk-ant-`, `sk-...`, JWT shapes `eyJ...`, `APP_OWNER_JWT`,
+   `APP_IDENTITY_TOKEN`, private keys, `api_key=`, `x-api-key`, FAL/EXA/
+   ANTHROPIC key names, Resend/GitHub/Google key shapes: **no matches**.
+   Two benign hits for the word `correctAnswer`: the debrief renderer
+   (`e.correctAnswer`, shown after submit) and the schema column definition.
+   `.assetsignore` excludes `.dev.vars` and `wrangler.json` from uploads.
+4. Secrets in git: no tracked file matches .env/.dev.vars/secret/credential/
+   key/session/token patterns; `git log -p --all` has no key or JWT
+   patterns; `.dev.vars`, `.deepspace/`, `.env*`, `dist`, `.wrangler` are
+   ignored. `deepspace secrets list` -> "No secrets in prd": the app needs
+   none, because integrations go through the DeepSpace proxy. Test-account
+   passwords live only in `~/.deepspace/test-accounts.json` (never in repo).
+5. Other hardening already in place
+   - Grader prompt treats the learner answer as untrusted data in tags and
+     ignores instructions inside it; score clamped 0-10 and rounded.
+   - Spend control: generation only when the user has flown every existing
+     scenario in the track, plus an 8/day per-user cap; buttons disabled
+     while a call is in flight.
+   - Actions run RBAC-off, so every ownership rule is explicit in code and
+     every action logs its caller.
