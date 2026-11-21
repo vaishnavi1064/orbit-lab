@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth, useQuery } from 'deepspace'
 import { Users } from 'lucide-react'
 import type { AnswerData, UpvoteData } from '@/lib/types'
+import { crewNumbers } from '@/lib/crew'
 import { actions } from '@/lib/actions'
 import { useToast } from '@/components/ui'
 import { CrewEntry } from './CrewEntry'
@@ -29,6 +30,7 @@ export function CrewLog({ scenarioId }: { scenarioId: string }) {
   }, [status, records, initialIds])
 
   const voted = useMemo(() => new Set(myVotes.map((v) => v.data.answerId)), [myVotes])
+  const numbers = useMemo(() => crewNumbers(records), [records])
   const sorted = useMemo(
     () =>
       [...records].sort(
@@ -82,6 +84,7 @@ export function CrewLog({ scenarioId }: { scenarioId: string }) {
                 <CrewEntry
                   id={r.recordId}
                   answer={r.data}
+                  crewNumber={numbers.get(r.recordId)}
                   own={r.data.userId === userId}
                   voted={voted.has(r.recordId) || pending.has(r.recordId)}
                   pending={pending.has(r.recordId)}

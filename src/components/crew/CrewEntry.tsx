@@ -1,13 +1,19 @@
-/** One answer in the Crew Log: author, score, explanation, upvotes. */
+/**
+ * One answer in the Crew Log: anonymous label, score, explanation, upvotes.
+ * Authors are "Crew member N" (submission order); your own entry is "You".
+ */
 
 import { useState } from 'react'
 import type { AnswerData } from '@/lib/types'
+import { crewLabel } from '@/lib/crew'
 import { cn } from '@/lib/utils'
 import { UpvoteButton } from './UpvoteButton'
 
 interface Props {
   id: string
   answer: AnswerData
+  /** 1-based submission order for this scenario. */
+  crewNumber: number | undefined
   own: boolean
   voted: boolean
   pending: boolean
@@ -15,10 +21,10 @@ interface Props {
   onVote: () => void
 }
 
-export function CrewEntry({ id, answer, own, voted, pending, fresh, onVote }: Props) {
+export function CrewEntry({ id, answer, crewNumber, own, voted, pending, fresh, onVote }: Props) {
   const [expanded, setExpanded] = useState(false)
   const long = answer.text.length > 420
-  const name = answer.displayName || 'Crew member'
+  const label = crewLabel(own, crewNumber)
 
   return (
     <article
@@ -36,12 +42,16 @@ export function CrewEntry({ id, answer, own, voted, pending, fresh, onVote }: Pr
         <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span
             aria-hidden="true"
-            className="grid h-7 w-7 place-items-center rounded-full bg-secondary font-mono text-xs text-foreground"
+            className={cn(
+              'grid h-7 w-7 place-items-center rounded-full font-mono text-xs',
+              own ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground',
+            )}
           >
-            {name[0]?.toUpperCase()}
+            {crewNumber ?? '?'}
           </span>
-          <span className="font-medium text-foreground">{name}</span>
-          {own && <span className="label-mono text-primary">You</span>}
+          <span data-testid="crew-label" className={cn('font-medium', own ? 'text-primary' : 'text-foreground')}>
+            {label}
+          </span>
           <span className="label-mono ml-auto rounded-sm bg-secondary px-2 py-1 text-foreground">{answer.score}/10</span>
         </header>
         <p
