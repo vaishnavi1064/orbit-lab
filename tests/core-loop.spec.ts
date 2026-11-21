@@ -70,7 +70,7 @@ test('core loop: briefing, transmit, debrief; key hidden until submit', async ({
     )
   await page.getByTestId('transmit-button').click()
   await expect(page.getByTestId('debrief-panel')).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText('Expert approach')).toBeVisible()
+  await expect(page.getByText('Expert approach', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /Score \d+ out of 10/ })).toBeVisible()
   if (SHOTS) {
     await page.waitForTimeout(1500)
