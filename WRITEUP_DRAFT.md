@@ -105,6 +105,11 @@ Claude Code:
   bundler include the DeepSpace SDK twice. It also caught its own process
   mistake once (a deploy that shipped uncommitted files), fixed it, and
   recorded it.
+- Made the Crew Log anonymous ("Crew member N", "You" for your own entry,
+  no names stored on answers), and the new network test caught a real leak:
+  DeepSpace's default user roster sent every user's name to every browser,
+  which would have unmasked the labels, so it scoped the roster to each
+  user's own row.
 
 Everything it did, including the mistakes, is logged phase by phase in
 NOTES.md.
