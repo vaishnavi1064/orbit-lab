@@ -562,3 +562,27 @@ using `tests/tools/prod-security.mjs`, plus the local Playwright specs.
      while a call is in flight.
    - Actions run RBAC-off, so every ownership rule is explicit in code and
      every action logs its caller.
+
+## Final deliverables
+
+- Live URL: https://orbit-lab.app.space (name `orbit-lab` was free; no
+  fallback name needed). App id `app_01M7YKTQV9V1MDHNM0J8KE3QKJ`.
+- Source of truth: GitHub `vaishnavi1064/orbit-lab` (claimed on first deploy;
+  `deepspace push` never run). Every commit type-checked before commit and
+  pushed right after.
+- README.md: what it is, how to run locally, mermaid architecture diagram,
+  integrations and why, what was left out and why.
+- WRITEUP_DRAFT.md: summary, integrations, main tradeoff, what the agent did,
+  "What I verified" TODO bullets for the owner.
+- Tests: `tests/core-loop.spec.ts`, `tests/crew-log.spec.ts` (3 users),
+  `tests/progress.spec.ts`, `tests/bad-json.spec.ts` (opt-in), scaffold
+  smoke/api/collab specs; `src/server/ai.test.ts` (17 unit tests);
+  production scripts in `tests/tools/`.
+
+Open items for the owner
+- Production contains test data from my smoke runs (mock-era scenarios and
+  answers marked ALPHA-/BRAVO-). Deleting it is irreversible, so I did not.
+- fal image URLs are CDN links that may expire; the UI falls back to the
+  gradient. Persisting to R2 is the fix if that matters.
+- Test accounts Crew A / Crew B (suffix `-bc3fce`) and Crew C live in the
+  shared DeepSpace test pool for this machine.
