@@ -5,7 +5,7 @@
 import type { CollectionSchema } from 'deepspace/schema'
 import { usersSchema } from './schemas/users-schema'
 import { settingsSchema } from './schemas/admin-schema'
-import { answerKeysSchema, answersSchema, scenariosSchema } from './schemas/orbit-schemas'
+import { answerKeysSchema, answersSchema, scenariosSchema, upvotesSchema } from './schemas/orbit-schemas'
 
 export const schemas: CollectionSchema[] = [
   usersSchema,
@@ -13,4 +13,5 @@ export const schemas: CollectionSchema[] = [
   scenariosSchema,
   answerKeysSchema,
   answersSchema,
+  upvotesSchema,
 ]

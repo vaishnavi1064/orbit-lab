@@ -52,7 +52,13 @@ export const answerKeysSchema: CollectionSchema = {
 
 /**
  * One graded answer per user per scenario (`uniqueOn`).
- * Phase 2: owner-only reads. Phase 3 opens reads to the scenario's crew.
+ *
+ * Visibility (SPEC): before you submit for a scenario you can read no answers
+ * for it; after you submit you can read all of them. Encoded per row:
+ * `crew` lists every user who has submitted for this scenario and is the
+ * `collaboratorsField`, so `read: 'shared'` = owner OR in crew. No
+ * `visibilityField`, so there is no public path. `submitAnswer` keeps `crew`
+ * in sync on every answer of the scenario (see NOTES.md).
  */
 export const answersSchema: CollectionSchema = {
   name: 'answers',
@@ -65,8 +71,33 @@ export const answersSchema: CollectionSchema = {
     { name: 'score', storage: 'number', interpretation: 'plain', required: true },
     { name: 'gotRight', storage: 'text', interpretation: { kind: 'json' }, default: [] },
     { name: 'missed', storage: 'text', interpretation: { kind: 'json' }, default: [] },
+    { name: 'crew', storage: 'text', interpretation: { kind: 'json' }, default: [] },
+    { name: 'upvoteCount', storage: 'number', interpretation: 'plain', default: 0 },
   ],
   uniqueOn: ['scenarioId', 'userId'],
+  ownerField: 'userId',
+  collaboratorsField: 'crew',
+  permissions: {
+    '*': DENY_ALL,
+    viewer: DENY_ALL,
+    member: { read: 'shared', ...NO_WRITES },
+    admin: { read: 'shared', ...NO_WRITES },
+  },
+}
+
+/**
+ * One upvote per user per answer (`uniqueOn`). Written only by the `upvote`
+ * action (which also blocks self-upvotes). Users read only their own rows,
+ * to know what they already upvoted; counts live on `answers.upvoteCount`.
+ */
+export const upvotesSchema: CollectionSchema = {
+  name: 'upvotes',
+  columns: [
+    { name: 'answerId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
+    { name: 'scenarioId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
+    { name: 'userId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
+  ],
+  uniqueOn: ['answerId', 'userId'],
   ownerField: 'userId',
   permissions: {
     '*': DENY_ALL,

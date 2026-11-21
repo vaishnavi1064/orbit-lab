@@ -39,6 +39,16 @@ export type AnswerData = {
   score: number
   gotRight: string[]
   missed: string[]
+  /** userIds of everyone who has submitted for this scenario (read access). */
+  crew?: string[]
+  upvoteCount?: number
+}
+
+/** `upvotes` record data. */
+export type UpvoteData = {
+  answerId: string
+  scenarioId: string
+  userId: string
 }
 
 /** What the debrief panel needs. Returned by submitAnswer and getDebrief. */
