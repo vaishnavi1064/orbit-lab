@@ -48,7 +48,7 @@ export default function Navigation() {
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-8">
           <Link to="/" aria-label="Orbit Lab home" className="rounded-md">
-            <Wordmark />
+            <Wordmark compactOnMobile />
           </Link>
 
           <div className="flex items-center gap-1">

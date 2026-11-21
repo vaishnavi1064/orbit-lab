@@ -2,7 +2,16 @@
 
 import { cn } from '@/lib/utils'
 
-export function Wordmark({ small = false, className }: { small?: boolean; className?: string }) {
+export function Wordmark({
+  small = false,
+  compactOnMobile = false,
+  className,
+}: {
+  small?: boolean
+  /** Show only the mark below the `sm` breakpoint (tight app nav on phones). */
+  compactOnMobile?: boolean
+  className?: string
+}) {
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <svg viewBox="0 0 32 32" className={small ? 'h-5 w-5' : 'h-7 w-7'} aria-hidden="true">
@@ -21,8 +30,9 @@ export function Wordmark({ small = false, className }: { small?: boolean; classN
       </svg>
       <span
         className={cn(
-          'font-display font-semibold tracking-[0.14em] text-foreground',
+          'font-display whitespace-nowrap font-semibold tracking-[0.14em] text-foreground',
           small ? 'text-xs' : 'text-sm',
+          compactOnMobile && 'sr-only sm:not-sr-only',
         )}
       >
         ORBIT LAB

@@ -36,8 +36,14 @@ export default function AppLayout() {
         <MotionConfig reducedMotion="user">
           <div className="relative flex h-screen flex-col overflow-hidden bg-background">
             <Starfield density={1.1} parallax={false} />
+            <a
+              href="#main"
+              className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:absolute focus:left-4 focus:top-3"
+            >
+              Skip to content
+            </a>
             <Navigation />
-            <main className="relative z-10 min-h-0 flex-1 overflow-y-auto">
+            <main id="main" tabIndex={-1} className="relative z-10 min-h-0 flex-1 overflow-y-auto outline-none">
               <Suspense fallback={<RouteFallback />}>
                 <Outlet />
               </Suspense>
