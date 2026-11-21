@@ -10,7 +10,8 @@
 import type { ActionResult } from 'deepspace/worker'
 import { isTrackId } from '../lib/tracks'
 import type { AnswerData, GenerateScenarioResult, ScenarioData } from '../lib/types'
-import { findSources, generateScenarioContent } from '../server/ai'
+import { enqueueJob } from 'deepspace/worker'
+import { findSources, generateScenarioContent, isLive } from '../server/ai'
 import { aiContext, fail, guarded, type Ctx } from './shared'
 
 /** Spend control: new scenarios a single user may trigger per 24h. */
@@ -71,6 +72,20 @@ export async function generateScenario(ctx: Ctx): Promise<ActionResult<GenerateS
     }
     const created = await ctx.tools.create('scenarios', scenario, scenarioId)
     if (!created.success) return fail('Could not publish the briefing. Try again.')
+
+    // Illustration: background job, never blocks the briefing. Skipped in mock
+    // mode (the gradient fallback is the mock image).
+    if (isLive(ctx.env)) {
+      try {
+        await enqueueJob(ctx.env.JOB_ROOMS, `app:${ctx.env.DEEPSPACE_APP_ID}`, 'scenario-image', {
+          scenarioId,
+          title: content.title,
+          track,
+        }, { maxAttempts: 2, enqueuedBy: ctx.userId })
+      } catch (err) {
+        console.warn(`[generateScenario] image job not queued: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
 
     return { success: true, data: { scenarioId, reused: false } }
   })

@@ -18,21 +18,27 @@ interface Props {
 
 export function ScenarioArt({ imageUrl, track, title, className }: Props) {
   const [failed, setFailed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const showImage = !!imageUrl && !failed
 
   return (
     <div className={cn('relative aspect-[16/9] overflow-hidden bg-muted sm:aspect-[21/9]', className)}>
-      {showImage ? (
+      {/* Gradient stays underneath until the image has actually loaded. */}
+      {(!showImage || !loaded) && <FallbackArt track={track} />}
+      {showImage && (
         <img
           src={imageUrl}
           alt={`Illustration for ${title}`}
           loading="lazy"
           decoding="async"
+          onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
-          className="h-full w-full object-cover"
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover transition-opacity duration-700 motion-reduce:transition-none',
+            loaded ? 'opacity-100' : 'opacity-0',
+          )}
+          data-testid="scenario-image"
         />
-      ) : (
-        <FallbackArt track={track} />
       )}
       {/* bottom fade into the panel */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-card to-transparent" />

@@ -1,50 +1,49 @@
 /**
- * Background-job handler — invoked by AppJobRoom (worker.ts) for every
- * job picked up from the queue. Dispatch on `job.type` and return a
- * result (captured as `job.result`) or throw to fail (retried up to
- * `maxAttempts`, then permanently marked failed).
+ * Background jobs, run by AppJobRoom (worker.ts). Work that must outlive the
+ * HTTP response goes here (Cloudflare kills waitUntil after 30s).
  *
- * Use this for any work that needs to outlive the HTTP response:
- *   - AI generation that exceeds Cloudflare's 30-second waitUntil window
- *   - Export / render pipelines
- *   - Bulk imports, fan-out side effects
- *
- * Enqueue from a client with the `useJobs(roomId)` hook, or from
- * worker-side code (an HTTP route, an action, a cron task) with
- * `enqueueJob(env.JOB_ROOMS, \`app:${env.DEEPSPACE_APP_ID}\`, type, payload)`.
- *
- * Long-running progress / checkpoint guidance:
- *   - `ctx.progress(0..1, msg?)` publishes a real-time update over the
- *     room's WebSocket so subscribers see progress without polling.
- *   - `ctx.continue(state, { afterMs })` yields and resumes on the next
- *     alarm with `job.resumeFrom = state` — use this for work that
- *     exceeds the 15-minute per-alarm wall-time ceiling.
- *   - `ctx.signal` is an AbortSignal that fires when a client cancels;
- *     forward it to `fetch` and check `.aborted` at loop suspension
- *     points.
- *
- * Example:
- *
- *   export async function runJob(job: Job, ctx: JobContext, env: Env) {
- *     switch (job.type) {
- *       case 'ai-summarize': {
- *         const { text } = job.payload as { text: string }
- *         ctx.progress(0.1, 'starting')
- *         const summary = await summarize(text, { signal: ctx.signal })
- *         return { summary }
- *       }
- *       default:
- *         throw new Error(`Unknown job type: ${job.type}`)
- *     }
- *   }
+ * `scenario-image`: generate the scenario's illustration with fal and write
+ * `imageUrl` onto the public scenario. The update is pushed live to every
+ * client viewing it. Failure is harmless: the UI keeps its gradient art.
  */
 
 import type { Job, JobContext } from 'deepspace/worker'
+import { buildCronContext } from 'deepspace/worker'
+import type { Env } from '../worker'
+import { isTrackId } from './lib/tracks'
+import { generateImage, type AiContext } from './server/ai'
 
-export async function runJob(
-  _job: Job,
-  _ctx: JobContext,
-  _env: unknown,
-): Promise<void> {
-  // No-op — implement your job handlers here. Dispatch on `_job.type`.
+export async function runJob(job: Job, ctx: JobContext, env: Env): Promise<unknown> {
+  switch (job.type) {
+    case 'scenario-image':
+      return scenarioImage(job.payload, ctx, env)
+    default:
+      throw new Error(`Unknown job type: ${job.type}`)
+  }
+}
+
+async function scenarioImage(payload: unknown, ctx: JobContext, env: Env) {
+  const { scenarioId, title, track } = (payload ?? {}) as { scenarioId?: string; title?: string; track?: string }
+  if (!scenarioId || !title || !isTrackId(track)) throw new Error('scenario-image: bad payload')
+
+  // Owner context: integrations billed to the app owner, RBAC-bypassing record writes.
+  const owner = buildCronContext(env, env.OWNER_USER_ID, `app:${env.DEEPSPACE_APP_ID}`)
+  const ai: AiContext = {
+    env,
+    integrate: async (endpoint, body) => {
+      try {
+        const res = await owner.integrations.call(endpoint, body as Record<string, unknown>)
+        if (res && typeof res === 'object' && 'success' in res) return res as Awaited<ReturnType<AiContext['integrate']>>
+        return { success: true, data: res }
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  }
+
+  ctx.progress(0.1, 'rendering illustration')
+  const imageUrl = await generateImage(ai, { title, track })
+  if (!imageUrl) return { imageUrl: null }
+  await owner.records.update('scenarios', scenarioId, { imageUrl })
+  return { imageUrl }
 }
