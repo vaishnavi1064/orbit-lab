@@ -580,9 +580,51 @@ using `tests/tools/prod-security.mjs`, plus the local Playwright specs.
   production scripts in `tests/tools/`.
 
 Open items for the owner
-- Production contains test data from my smoke runs (mock-era scenarios and
-  answers marked ALPHA-/BRAVO-). Deleting it is irreversible, so I did not.
+- Production test data: removed on 2026-11-21 after the owner confirmed (see
+  "Production test-data cleanup" below).
 - fal image URLs are CDN links that may expire; the UI falls back to the
   gradient. Persisting to R2 is the fix if that matters.
 - Test accounts Crew A / Crew B (suffix `-bc3fce`) and Crew C live in the
   shared DeepSpace test pool for this machine.
+
+## Production test-data cleanup (2026-11-21, owner confirmed)
+
+Scope agreed with the owner: delete everything created by the test accounts
+(Crew A/B/C) or containing ALPHA-/BRAVO-, plus the mock-era scenarios, but
+keep the live-generated Huygens scenario and its answer key. Never touch
+`users`.
+
+1. Inventory, read-only (`tests/tools/prod-inventory.mjs`, 3112185). The
+   owner's CLI agent tools see 0 answers, upvotes and answer keys (RBAC: not
+   crew, own-only, deny-all), and the agent route rejects app JWTs. So the
+   script signs in as each test account and records the WebSocket frames the
+   app's own pages receive. Found 6 scenarios (5 mock, 1 live), 9 answers
+   (A 6, B 3), 2 upvotes, and 6 answer keys inferred (id = scenario id). The
+   stored upvoteCounts matched the 2 visible upvotes, so there were no hidden
+   votes by other users.
+2. Mechanism. No collection allows client deletes, so, following the docs
+   (server actions bypass RBAC; owner-only action pattern), a temporary
+   action `cleanupTestData` was added (270b100). It could only delete
+   hard-coded record ids, was callable only by the owner or the two test
+   accounts, defaulted to a dry run, read every collection except `users`,
+   refused to delete if any record existed that was not on the expected
+   list, and returned ids only (never key content).
+3. Dry run (release rel_01M7ZJXWWH4WW0V2JDFTHJZPQ7): upvotes 2 of 2, answers
+   9 of 9, answerKeys 6 total (5 to delete), scenarios 6 total (5 to delete);
+   missing 0, unexpected 0. This confirmed the inferred key count and showed
+   there were no orphan keys.
+4. Delete, in order upvotes, answers, answerKeys, scenarios: 2, 9, 5, 5
+   deleted. A second dry run showed 0 upvotes, 0 answers, 1 answer key and 1
+   scenario (Huygens, planets #2, image intact).
+5. Removed the action (0ec3c96; source identical to before it was added)
+   and redeployed clean (rel_01M7ZK0TBY7JY3QR9HV5VSZTFT). POST
+   /api/actions/cleanupTestData now returns 404.
+6. prod-smoke re-run on `iss-ops`, not planets, so its canned answer would
+   not land on Huygens. A new live scenario, "Scrubber Offline During Cabin
+   Repair", was generated; no answer-key data on the wire before submit;
+   debrief shown (score 0, expected, since the canned answer is about a Mars
+   rover); stored debrief on revisit; image arrived; 0 console errors.
+
+Left in production afterwards: Huygens (planets #2, no answers) and the new
+ISS Ops scenario with one Crew A answer from the smoke run. The next Planets
+scenario will be numbered #3 (numbering is max + 1).
