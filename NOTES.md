@@ -219,3 +219,73 @@ Unsure / notes
   screenshots will use the Playwright test fixture in later phases.
 - The CLI's `deploy` only claims GitHub when a GitHub remote is selected;
   confirmed beforehand with `deepspace status` (`sourceInference: github`).
+
+## Phase 2: core loop (deployed, AI_MODE=mock)
+
+Live release `rel_01M7YNBD1AV2FT8TSW6XFW75TH`.
+
+Built
+- Schemas: `scenarios` (public read, no client writes), `answerKeys`
+  (`read:false` for every role incl. admin), `answers` (owner-only read for
+  now, `uniqueOn: [scenarioId, userId]`, `ownerField: userId`).
+- `src/server/ai.ts`: mock/live switch, one shared path for model output
+  (extract JSON, zod validate, one retry with the validation error fed back,
+  then a friendly `AiError`). Grader prompt treats the learner answer as
+  untrusted data in `<answer>` tags; score is clamped and rounded.
+  `AI_MOCK_BAD_JSON=true` forces malformed output to test the error path.
+- `src/server/mock-data.ts`: 2 scenarios per track (10), every source URL
+  checked for HTTP 200; keyword lists drive a deterministic mock grader.
+- Actions: `generateScenario` (reuse oldest unanswered scenario in the track
+  first; only generates when the caller has flown them all; 8/day cap per
+  user; key written before the public scenario under the same id),
+  `submitAnswer` (1..1500 chars after trim, duplicate check + DO `uniqueOn`,
+  grade, save, then return key + feedback), `getDebrief` (key only if the
+  caller has an answer row).
+- UI: incoming-transmission briefing (scanline sweep, teleprinter reveal capped
+  at 2.4s, skip button, full text for screen readers), answer console with
+  counter and Ctrl+Enter, "Contacting Houston..." grading state, debrief with
+  animated score ring and staggered lists, track mission log with stats,
+  "Next briefing" flow, home cards show flown/avg per track.
+- SPEC says Phase 2 is "anthropic only": scenarios are created with
+  `sources: []` and `imageUrl: ''` (exa and fal come in Phases 4 and 5).
+
+Tests
+- `tests/core-loop.spec.ts` (local, mock): full loop; answer key DATA and
+  `answerKeys` records absent from every WS frame and /api response before
+  submit; second submit refused; 1501 chars refused; revisit shows stored
+  debrief; signed-out POSTs to all actions and to
+  `/api/integrations/anthropic/chat-completion` get 401; zero console errors.
+- `src/server/ai.test.ts` (vitest): JSON extraction, mock content, grader,
+  bad JSON -> retry -> AiError, live-mode retry accepts the second reply.
+- `tests/tools/prod-smoke.mjs`: same loop against https://orbit-lab.app.space
+  with a test account. Result: key not on the wire, debrief 8/10, revisit ok,
+  no console errors.
+
+Bugs hit and fixes
+- **Production-only crash: `useQuery('scenarios'): No scope found`.** Worked in
+  dev, failed after deploy. Sourcemaps showed `deepspace/dist/index.js`
+  bundled into TWO chunks, so `RecordScope` and `useQuery` used different
+  React contexts. Cause: Windows drive-letter case. The shell cwd is
+  `d:\space` but some paths were realpath'd to `D:\space`, so the bundler saw
+  two module ids for one file. Fix: `vite.config.ts` sets
+  `root = realpathSync.native(process.cwd())` and derives the `@` alias from
+  it. Verified: one SDK copy when building from either casing.
+- Same root cause made `vitest` fail with "failed to find the current suite"
+  (scaffold tests too). It happens inside the vitest CLI before config loads,
+  so it cannot be fixed in config: run unit tests from `D:\space`
+  (PowerShell `Set-Location D:\space; npx vitest run`). All 11 pass there.
+- My first wire-tap assertion failed because the SDK's `records.list_schemas`
+  message lists column NAMES (e.g. `correctAnswer`). That is schema metadata,
+  not data. Tightened the assertion to "no key values, no answerKeys records".
+- Stopping the background dev server left its child holding port 5173; the
+  CLI refusal shipped `deepspace dev kill --port 5173`, which fixed it.
+- Test-account emails are global across all DeepSpace developers;
+  `crew-a@deepspace.test` was taken. Used a random suffix.
+
+Unsure / notes
+- Column names of server-only collections are visible in schema metadata sent
+  to clients. No values are. I consider this acceptable; flagging it for the
+  security write-up.
+- `displayName` comes from the caller's `users` row (fallback "Crew member").
+- Everything is still mock data. Live AI is switched on after all phases,
+  per the plan.
