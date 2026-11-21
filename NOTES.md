@@ -339,3 +339,49 @@ Unsure / notes
 - Answers saved in Phase 2 have `crew: []`. They stay visible to their owner,
   and the next submit on that scenario syncs them into the crew.
 - Upvotes are one-way (no un-vote). SPEC only asks for upvote().
+
+## Phase 4: exa sources and citations (deployed)
+
+Live release `rel_01M7YPJZSG43J7PGMYS1N4RA7S` (AI_MODE=mock).
+
+Built
+- `findSources` in src/server/ai.ts. Live: `exa/search` with
+  `includeDomains` = allowlist (nasa.gov, esa.int, eso.org, stsci.edu, major
+  universities, ...), highlights + 1200 chars of text per result. Results are
+  re-checked server-side (`https:` only, host must match the allowlist by
+  suffix, PDFs skipped), de-duplicated by URL, capped at 3, titles trimmed of
+  "| Site | Org" tails. Excerpts go to the model for grounding but are NOT
+  stored (only `{title, url}` is saved on the scenario).
+- A rotating sub-topic per track (6 per track) feeds the query, so successive
+  scenarios in a track cover different ground.
+- `generateScenario` now runs exa first, passes the sources to Claude with
+  "base facts on these; do not contradict them", and stores them.
+- Never blocks: a failed or empty search logs a warning and the briefing is
+  written from well-established facts only.
+- Mock mode returns the real (HTTP 200 checked) sources of the mock scenario
+  it is about to generate.
+- UI: briefing shows "Grounded in" [1]..[3] links; debrief repeats them under
+  "Sources". Links open in a new tab with `rel="noopener noreferrer"` and an
+  sr-only "(opens in a new tab)".
+
+Verification
+- One real `exa/search` call with the exact production body (topic "tidal
+  disruption event black hole"), $0.007: 8 results, all reputable and on
+  topic (NASA TESS/Swift TDE pages, MIT News, ESO "spaghettification" release,
+  STScI Roman, Chandra/Harvard).
+- Unit tests (14 total): allowlist/https/PDF filtering, de-dup, cap of 3,
+  excerpt extraction, failed search returns [] instead of throwing.
+- e2e core loop asserts the briefing has "Grounded in" with an https link to a
+  reputable host and `rel=noopener`. Production smoke passed, no console errors.
+
+Bugs hit and fixes
+- Git Bash rewrote a `/scenario/...` CLI argument into a Windows path
+  (`.../Git/scenario/...`). Use `MSYS_NO_PATHCONV=1` for such helper calls.
+- Element screenshots taller than the viewport get clipped inside the app's
+  internal scroll container; use a tall viewport for those captures.
+
+Unsure / notes
+- `includeDomains` limits exa to the allowlist; I re-check on our side anyway
+  so a provider change cannot slip a blog link into a scenario.
+- Live source quality per track is verified for one topic so far; the full
+  live pass happens in step 4 (switch to live).
