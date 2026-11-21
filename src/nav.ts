@@ -14,4 +14,5 @@ export interface NavItem {
 
 export const nav: NavItem[] = [
   { path: '/home', label: 'Missions' },
+  { path: '/me', label: 'Progress' },
 ]
