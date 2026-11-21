@@ -131,6 +131,18 @@
   animation: scan 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
+/* New Crew Log entry: border flashes amber once, then settles. */
+@keyframes crew-flash {
+  0% { box-shadow: 0 0 0 1px var(--color-primary), 0 0 24px -6px var(--color-primary); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@utility crew-flash {
+  animation: crew-flash 1.6s ease-out 1;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* Amber hover/active glow for console panels (token-driven, no literals in JSX) */
 @utility glow-primary {
   box-shadow: var(--shadow-card-hover);

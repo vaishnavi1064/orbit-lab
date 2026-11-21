@@ -17,6 +17,7 @@ import { BriefingPanel } from '@/components/mission/BriefingPanel'
 import { AnswerConsole } from '@/components/mission/AnswerConsole'
 import { GradingState } from '@/components/mission/GradingState'
 import { DebriefPanel } from '@/components/mission/DebriefPanel'
+import { CrewLog, CrewLogLocked } from '@/components/crew/CrewLog'
 import { Button, EmptyState } from '@/components/ui'
 
 const fade = {
@@ -139,6 +140,8 @@ export default function ScenarioPage() {
           )}
         </AnimatePresence>
       </div>
+
+      <div className="mt-12">{hasAnswered ? <CrewLog scenarioId={id} /> : phase === 'answer' && <CrewLogLocked />}</div>
     </div>
   )
 }
